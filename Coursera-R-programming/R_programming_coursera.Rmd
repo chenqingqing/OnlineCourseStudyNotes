@@ -1,0 +1,1072 @@
+---
+title: "Coursera R Programming"
+author: "Chen Qingqing"
+date: "19/03/2018"
+output: 
+  rmarkdown::html_document:
+    toc: true # table of content true 
+    toc_depth: 3 # upto three depths of headings (spcified by #, ##, and ###)
+    toc_float: true # you can add your custom css. should be in same folder
+    number_sections: true ## if you want number sections at each table header
+    theme: spacelab 
+    highlight: tango # specifies the syntax highlighting style
+    #code_folding: hide
+    keep_md: true 
+    df_print: paged
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      #eval = TRUE, 
+                      message = FALSE,
+                      warning = FALSE, 
+                      fig.path = "Figures/"
+                      #fig.width = 3, 
+                      #fig.height = 3,
+                      #results="markup", 
+                      #collapse = TRUE
+                      )
+```
+# Getting Started with R
+## Data Types
+### Objects 
+- character
+- numeric (real number)
+- integer 
+- complex 
+- logical(Ture/False)
+- The most basic object is vector
+    - A vector can only contain objects of the same class
+    - BUT: The one exception is a list, which is represented as a vector but can contain objects of different classes
+    - Empty vectors can be created with the vector() function
+    
+### Numbers 
+- Generally treated as numeric objects 
+- If you explicitly want an integer, need to specify the `L` suffix, eg. 1L explicitly gives you an integer 
+- Special number `Inf` which represents infinity
+- `NaN` represents **undefined value ("not a number")**
+
+### Attributes 
+R objects can have attributes 
+  - names, dimnames 
+  - dimensions (e.g. matrices, arrays)
+  - class 
+  - length
+  - other user-defined attributes/metadata
+  - Attribute of an object can be accessed using the `attributes()` function
+  
+### Vectors
+- The c() function can be used to create vectors of objects 
+- Mixing Objects: when different objects are mixed in a vector, coercion occurs so that every element in the vector is of the same class
+- Objects can be explicitly coerced from one class to another using the `as.functions`
+
+```{r vectors}
+x <- 0:6
+x
+class(x)
+as.numeric(x)
+as.logical(x)
+as.character(x)
+```
+
+- Nonsensical coercion results in NAs
+```{r nonsentical_coercion}
+x <- c("a","b","c")
+as.numeric(x)
+as.logical(x)
+as.complex(x)
+```
+
+### Lists
+Lists are a special type of vector that can contain elements of different classes. 
+```{r lists}
+list(1, "a", "TRUE", 1+4i)
+```
+
+### Matrices 
+- Matrices are vectors with a dimension attribute. The dimentsion attribute is itself an integer vector of length 2 (nrow, ncol)
+```{r matrices}
+m <- matrix(nrow = 2, ncol = 3)
+m
+dim(m)
+attributes(m)
+```
+- Matries are constructed _column-wise_, so entries can be thought of starting in the "upper left" conner and running down the columns
+```{r matrices2}
+matrix(1:6, nrow = 2, ncol = 3)
+```
+- Matries can also be created directly from vectors by adding a dimension attribute 
+```{r matrices3}
+m <- 1:10
+m
+dim(m) <- c(2,5)
+m 
+```
+- Matrices can be created by _column-binding_ or _row-binding_ with `cbind()` and `rbind()`
+```{r matrices4}
+x <- 1:3
+y <- 10:12
+cbind(x,y)
+rbind(x,y)
+```
+
+### Factors 
+- Represent categorical data. They can be ordered or unordered 
+  - factors with labels is _better_ than modelling function like `lm()` and `glm()`
+  - using factors with labels is _better_ than using integers because factors are self-describing 
+  
+```{r factor}
+x <- factor(c("yes","yes","no","yes","no"))
+x 
+table(x)
+unclass(x)
+```
+- The order of the levels can be set using `levels` arguments 
+
+```{r factors2}
+x <- factor(c("yes","yes","no","yes","no"), levels = c("yes","no"))
+x
+```
+### Missing Values 
+Missing value are denoted by _NA_ OR _NaN_ for undefined mathematical operations 
+  - `is.na()` is used to test objects if they are NA
+  - `is.nan()` is used to test for NaN
+  - NA calues have a class also, so there are integer NA, character NA, etc
+  - <span style="color:red">A NaN value is also NA but the coverse is not true</span>
+  
+```{r missing}
+x <- c(1,2,NA,10,3)
+is.na(x)
+is.nan(x)
+x <- c(1,2,NaN, NA, 4)
+is.na(x)
+is.nan(x)
+```
+
+### Data Frames 
+Data frames are used to stor _tabular data_
+  - a special type of list where every element of the list has to have the **same length**
+  - each element of the list can be thought of as a column and the length of each element of the list is the number of rows 
+  - has a special attribute called `row.names`
+  - are usually created by calling `read.table()`, or `read.csv()`
+  - can be converted to a matrix by calling `data.matrix()`
+  
+```{r data_frame}
+x <- data.frame(foo=1:4, bar=c(T,T,F,F))
+x
+nrow(x)
+ncol(x)
+```
+
+### Names Attribute 
+Useful for writing readable code and self-describing objects 
+```{r names}
+x <- 1:3
+x
+names(x)
+names(x) <- c("foo","bar","norf")
+x
+names(x)
+```
+
+```{r names2}
+x <- list(a=1,b=2,c=3)
+x
+```
+
+```{r names3}
+x <- matrix(1:4, nrow = 2, ncol = 2)
+x
+dimnames(x) <- list(c("a","b"), c("c","d"))
+x
+```
+
+## Reading Data 
+### Reading Data into R 
+- `read.table`, `read.csv` for reading tabular data 
+- `readLines` for reading lines of a text file 
+- `source` for reading in R code files (inverse of dump)
+- `dget` for reading in R code files (inverse of dput)
+- `load` for reading in saved workspaces 
+- `unserialize` for reading single R objects in binary form 
+### Writting Data 
+- `write.table`
+- `writeLines`
+- `dump`
+- `dput`
+- `save`
+- `serialize`
+
+### Reading in Larger Datasets with read.table 
+- Set `comment.char = ""` if there are no commented lined 
+- Use the `colClasses` argument 
+- Set `nrows`
+- calculating memory requirements 
+  - eg. a data frame has 1,500,000 rows and 120 columns, all of which are numeric data: memory = 1500000 * 120 * 8 bytes/numeric = 1440000000 bytes = 1440000000/2^20^ bytes/MB = 1373.29 MB = 1.34GB
+
+### Textual Data Formats 
+- a way to pass data around is by deparsing the R object with dput and reading it back in using dget
+```{r textual}
+y <- data.frame(a=1,b="a")
+dput(y)
+dput(y,file = "y.R") #save to y.R file 
+new.y <- dget("y.R")
+new.y
+```
+
+- multiple objects can be deparsed using the dump function and read back in using source 
+
+```{r dump_function}
+x <- "foo"
+y <- data.frame(a = 1, b = "a")
+dump(c("x","y"), file = "data.R") # deparse 
+rm(x,y) # remove x,y
+source("data.R") # read back 
+
+```
+
+### Interfaces to the Outside World
+- `file` opens a connection to a file 
+- `gzfile` opens a connection to a file compressed with gzip
+- `bzfile` opens a connection to a file compressed with bzip2
+- `url` opens a connection to a webpage 
+
+```{r url}
+con <- url("http://www.jhsph.edu", "r")
+x <- readLines(con)
+head(x)
+```
+
+### Subsetting 
+#### Subset Basic
+- **[** returns an object of the same class as the original 
+- **[[** extract elements of a list or a data frame, can only used to extract a single element 
+- **$** extract elements of a list or data frame by name 
+
+```{r subsetting}
+x <- c("a","b","c","c","d","a")
+x[1]
+x[1:4] #use numeric index
+x[x>"a"]# use logic index
+u <- x >"a"
+x[u] # use logic index
+
+```
+
+#### Subsetting Lists 
+
+```{r lists_subset}
+x <- list(foo=1:4, bar = 0.6)
+x
+x[1]
+x[[1]]
+x$bar 
+x["bar"]
+```
+```{r subset_list2}
+x <- list(foo=1:4, bar = 0.6, baz="hello")
+x[c(1,3)] #extrac multiple element, using single bracket 
+```
+
+```{r take_an_integer_sequence}
+x <- list(a = list(10,12,14), b=c(3.14,2.81))
+x[[c(1,3)]]
+x[[1]][[3]]
+x[[c(2,1)]]
+x[2]
+
+```
+
+#### Subsetting a Matrix
+```{r sub_matrix}
+x <- matrix(1:6, 2,3)
+x
+x[1,2]
+x[1,2, drop=FALSE] # when retrive it returned as a vector of length 1 rather than a 1X1 matrix, this can be turned off by setting drop = FALSE 
+x[1,]
+x[1, , drop=FALSE]
+```
+
+#### Subsetting Partial Matching 
+Partial Matching of names is allowed with [[ and $ 
+```{r partial_matching}
+x <- list(aardvark = 1:5)
+x$a
+x[['a']]
+x[['a', exact=FALSE]]
+```
+
+#### Subsetting Removing Missing Values
+
+```{r subset_missing_value}
+x <- c(1,2,NA,4,NA,5)
+y <- c("a","b",NA,"d",NA,"f")
+bad <- is.na(x)
+bad
+x[!bad]
+good <- complete.cases(x,y)
+good
+x[good]
+y[good]
+
+```
+```{r removing_NA_values}
+airquality[1:6,]
+good <- complete.cases(airquality)
+airquality[good,][1:6,]
+```
+
+# Programming with R
+## Control Structures 
+### If-Else 
+`if(condition){
+  ## do something
+} else {
+## do something
+}`
+
+`if (condition){
+## do something
+} else if(condition)
+{## do something different}
+else{
+## do something different 
+}
+`
+```{r if_1}
+if(x>3){
+  y <- 10
+} else{
+  y <- 0
+}
+
+y <- if(x>3){10} else{0}
+```
+
+### For loops 
+```{r for_loop}
+for (i in 1:10){ print (i)}
+```
+```{r for_loop2}
+x <- c("a","b","c","d")
+for (i in 1:4)(
+  print(x[i])
+)
+
+for (i in seq_along(x)){
+  print(x[i])
+}
+
+for (letter in x){
+  print(letter)
+}
+
+for (i in 1:4) print(x[i])
+```
+
+```{r loops_nested}
+x <- matrix(1:6, 2,3)
+x
+for (i in seq_len(nrow(x))){
+  for (j in seq_len(ncol(x))) {
+    print(x[i,j])
+  }
+}
+```
+- Be careful with nesting though. Nesting beyond 2-3 levels is often very difficult to read/understand
+
+###  While loops 
+- While loops begin by testing a condition. if it is true, then they execute the loop body. Once the loop body is executed, the condition is tested again, and so forth.
+- While loops can potentially result in infinite loops if not written properly. Use with care!
+
+```{r while_loop}
+count <- 0
+
+while(count<10){
+  print(count)
+  count <- count+1
+}
+```
+
+- Conditions are always evaluated from left to right
+```{r while_loop2}
+z <- 5
+while (z>=3 && z<=10) {
+  print(z)
+  coin <- rbinom(1,1,0.5)
+  if(coin == 1) {
+    ## random walk
+      z <- z + 1
+  }else{
+      z <- z - 1
+  }
+}
+```
+
+### Repeat, Next, Break 
+- repeat: the only way to exit a repeat loop is to call break 
+- next: is used to skip an iteration of a loop 
+```{r next}
+for(i in 1:100) {
+  if (i<=20){
+    ## skip the first 20 iterations
+    next
+  }
+}
+```
+- return: return signals that a function should exit and return a given value 
+
+## R Function 
+### Your first R function 
+```{r function1}
+above <- function(x, n){
+  use <- x > n
+  x[use]
+}
+x<- 1:20
+above(x,12)
+```
+
+```{r function2}
+colummean <- function(y){
+    nc <- ncol(y)
+    means <- numeric(nc)
+    for (i in 1:nc){
+      means[i] <- mean(y[,i])
+    }
+    means
+}
+colummean(airquality)
+```
+
+```{r function3}
+colummean <- function(y, removeNA=TRUE){
+    nc <- ncol(y)
+    means <- numeric(nc)
+    for (i in 1:nc){
+      means[i] <- mean(y[,i], na.rm = removeNA)
+    }
+    means
+}
+colummean(airquality)
+```
+
+### Function  
+`f <- function(argument){
+## do something interesting
+}`
+
+```{r function3_}
+mydata <- rnorm(100)
+sd(mydata)
+sd(x = mydata)
+sd(x = mydata, na.rm = FALSE)
+sd(na.rm = FALSE, x = mydata)
+sd(na.rm = FALSE, mydata)
+```
+- can mix positional matching with matching by name.  When an argument is matched by name, it is "taken out" of the argument list and the remaining unnamed arguments are matched in the order that they are listed in the funciton definition 
+
+```{r function4}
+args(lm)
+#lm(data = mydata, x~y, model = FALSE, 1:100)
+#lm(x~y, mydata, 1:100, model = FALSE)
+```
+
+- Defining a function 
+```{r function5}
+f <- function(a,b=1,c=2, d=NULL){}
+```
+
+- Lazy evaluation 
+```{r funciton6}
+f <- function(a,b){
+  a^2
+}
+f(2)
+
+```
+
+### The "..." argument  
+- `...` is often used when extending another function and you don't want to copy the entire argument list of the original function 
+
+```{r function7}
+myplot <- function(x,y,type="1", ...){
+  plot(x,y, type = type, ...)
+}
+mean
+```
+
+- the ...argument is also necessary when the number of arguments passed to the function cannot be known 
+```{r function8}
+args(paste)
+args(cat)
+```
+
+## Scoping Rules and Rules
+### Symbol Binding 
+- When R tries to bind a value to symbol
+  - search the global environment for a symbol name matching the one requested 
+  - search then namespaces of each of the packages on the search list 
+  - the search list can be found by using the `search` function
+  
+```{r search}
+search()
+```
+  - when a user loads a package with `library` the namespace of that package gets put in positoin 2 of the search list(by default) and everything else gets shifted down the list 
+  - R has separate namespaces for funcitons and non-functions so it's possible to have an object named c and a function named c 
+  
+- Scoping Rules 
+  - determine how a value is associated with a free variable in a function 
+  - R uses `lexical` scoping or `static` scoping. A common alternative is `dynamic` scoping 
+    - **lexical scoping**: the values of free variables are searched for in the environment in which the funcition was defined 
+      - what is an environment?
+        - a collection of (symbol, value) pairs, i.e. x is a symbol and 3.14 might be its value
+        - every environment has a parent environment; it is possible for an environment to have multiple "children"
+        - the only environment without a parent is the **empty environment**
+        - a function + an environment = a closure or funciton closure 
+      - 
+```{r lexical_scoping}
+f <- function(x,y){
+  x^2 + y/z
+}
+
+make.power <- function(n){
+  pow <- function(x){
+    x^n
+  }
+  pow
+}
+cube <- make.power(3)
+square <- make.power(2)
+cube(3)
+square(3)
+
+```
+  
+```{r environemnt}
+ls(environment(cube))
+get("n", environment(cube))
+
+ls(environment(square))
+get("n",environment(square))
+```
+
+- lexical vs. dynamic scoping 
+```{r lexical_dynamic}
+y <- 10
+f <- function(x){
+  y <- 2
+  y^2 + g(x)
+}
+
+g <- function(x){
+  x*y
+}
+
+f(3)
+```
+
+### Scoping Rules Optimization 
+- `optim`, `nlm`
+- maximizing a normal likelihood 
+  - write a "constructor" function: optimization functions in R _minimize_ function, so you need to use the negative log-likelihood
+
+```{r optimize}
+make.NegLogLik <- function(data, fixed=c(FALSE,FALSE)){
+  params <- fixed
+  function(p){
+    params[!fixed] <- p
+    mu <- params[1]
+    sigma <- params[2]
+    a <- -0.5*length(data)*log(2*pi*sigma^2)
+    b <- -0.5*sum((data-mu)^2)/sigma^2
+    -(a+b)
+  }
+}
+set.seed(1); normals<-rnorm(100,1,2)
+nLL <- make.NegLogLik(normals)
+nLL
+ls(environment(nLL))
+```
+
+## Coding Standards 
+- Always use text files/text editor 
+- Indent your code 
+- Limit the width of your code (80 columns?)
+- Suggested: Indents of 4 spaces at minimum; 8 spaces ideal 
+- Limit the length of individual function 
+  
+## Dates and Times 
+### Basic
+- Dates are represented by the `Date` class, `as.Date()`
+- Times are represented by the `POSIXct` (a verty large integer under the hood) or the `POSIXlt` (is a list underneath and it stores a bunch of other useful information like the day of the week, day of the year, month, day of the month) class
+- Dates are stored internally as the number of days since 1970-01-01
+- Times are stored internally as the number of seconds since 1970-01-01
+  
+```{r date}
+x <- as.Date("1970-01-01")
+x
+unclass(x)
+unclass(as.Date("1970-01-02"))
+```
+
+```{r time}
+x <- Sys.time()
+x
+p <- as.POSIXlt(x)
+names(unclass(p))
+p$sec
+```
+ 
+```{r strptime}
+datestring <- c("January 10, 2012 10:40", "December 9, 2011 9:10")
+x <- strptime(datestring, "%B %d, %Y %H:%M")
+x
+class(x)
+```
+
+### Operations on Dates and Times 
+```{r operation_time}
+x <- as.Date("2012-01-01")
+y <- strptime("9 Jan 2011 11:34:21", "%d %b %Y %H:%M:%S")
+x
+y
+x<- as.POSIXlt(x)
+x-y
+```
+```{r operation_time2}
+x <- as.Date("2012-03-01"); y<- as.Date("2012-02-28")
+x-y
+x <- as.POSIXct("2012-10-25 01:00:00")
+y <- as.POSIXct("2012-10-25 06:00:00", tz = "GMT")
+y-x
+```
+
+# Looping and Debugging 
+## Loop Function 
+### lapply
+Looping on the Command Line 
+
+- `lapply`: Loop over a list and evaluate a function on each element 
+  - argument: list `x`, a function `fun`, other arguments, if `x` is not a list, it will be coerced to a list using `as.list`
+  - `lapply` always returns a list, regardless of the class of the input 
+  - `lapply` and friends make heavy use of _anonymous_ functions (no name function)
+
+```{r lapply1}
+x <- list(a=1:4, b=rnorm(10), c=rnorm(20,1), d = rnorm(100,5))
+x
+lapply(x, mean)
+```
+
+```{r lapply2}
+x <-1:4
+x
+lapply(x, runif)
+```
+```{r lapply3}
+x <- 1:4
+lapply(x, runif, min=0, max=10)
+```
+```{r lapply4}
+x <- list(a = matrix(1:4, 2,2), b = matrix(1:6, 3,2))
+x
+lapply(x, function(elt) elt[,1])
+```
+
+
+
+
+- `sapply`: Same as `lapply` but try to simplify the result
+  - If the result is a list where every element is length 1, then a vector is returned 
+  - If the result is a list where every element is a vector of the same length(>1), a matrix is return 
+  - If it cannot figure things out, a list is return 
+  
+```{r sapply1}
+x <- list(a = 1:4, b = rnorm(10), c = rnorm(20,1), d = rnorm(100,5))
+lapply(x, mean)
+sapply(x, mean)
+```
+ 
+- `apply` : Apply a function over the margins of any array 
+  - It is most often used to apply a function to the rows or columns of a matrix 
+  - It can be used with general arrays, e.g. taking the average of an array of matrices 
+  - It is not really faster than writing a loop, but it works in one line
+  - for _sums_ and _means_ of matrix dimensions, we have some shortcuts
+    - `rowSums = apply(x,1,sum)`
+    - `rowMeans = apply(x,1,mean)`
+    - `colSums = apply(x,2, sum)`
+    - `colMeans = apply(x,2,mean)`
+    
+  
+```{r apply1}
+str(apply)
+x <- matrix(rnorm(200), 20, 10)
+apply(x, 2, mean) # get means of each columns
+apply(x, 1, mean) # get means of each rows 
+```
+```{r apply2}
+x <- matrix(rnorm(200), 5,5)
+x
+apply(x, 1, quantile, probs = c(0.25, 0.75))
+```
+
+```{r apply3}
+a <- array(rnorm(2*2*2), c(2,2,2))
+a
+apply(a, c(1,2), mean)
+rowMeans(a, dims = 2)
+```
+
+- `tapply`: Apply a function over subsets of a vector 
+  - 
+```{r tapply1}
+str(tapply)
+#take group means
+x <- c(rnorm(10), runif(10), rnorm(10,1))
+x
+f <- gl(3,10)
+f
+tapply(x, f, mean)
+tapply(x,f,mean, simplify=FALSE)
+tapply(x, f, range)
+```
+
+- `mapply`: Multivariate verstion of `lapply`
+  - 
+```{r mapply4}
+str(mapply)
+```
+```{r mapply2}
+list(rep(1,4), rep(2,3), rep(3,2), rep(4,1))
+mapply(rep, 1:4, 4:1)
+```
+```{r mapply3}
+noise <- function(n, mean, sd){
+        rnorm(n, mean, sd)
+}
+noise(5,1,2)
+noise(1:5, 1:5, 2)
+mapply(noise, 1:5, 1:5, 2)
+list(noise(1,1,2), noise(2,2,2), noise(3,3,2), noise(4,4,2), noise(5,5,2)) #instant vectorization
+```
+
+-  An auxiliary function `split` is also useful, particularly in conjuction with `lapply`
+```{r split1}
+str(split)  # drop indicates whether empty factors levels should be dropped 
+x <- c(rnorm(10), runif(10), rnorm(10,1)) 
+f <- gl(3,10)
+split(x,f) # always retrun a list 
+lapply(split(x,f), mean)
+```
+
+```{r split2}
+library(datasets)
+head(airquality)
+s <- split(airquality, airquality$Month)
+lapply(s, function(x) colMeans(x[, c("Ozone","Solar.R","Wind")],na.rm = TRUE))
+```
+
+```{r split3}
+sapply(s, function(x) colMeans(x[,c("Ozone","Solar.R", "Wind")]))
+sapply(s, function(x) colMeans(x[,c("Ozone","Solar.R", "Wind")], na.rm = TRUE))
+
+```
+  
+```{r split4}
+# spliting on more than one level 
+x <- rnorm(10)
+f1 <- gl(2,5)
+f2 <- gl(5, 2)
+f1
+f2
+interaction(f1,f2)
+str(split(x, list(f1,f2))) # here list will automatically do the interaction function
+str(split(x, list(f1,f2), drop = TRUE))
+```
+  
+## Debugging 
+## Diagnosing the Problem
+Indicatinos that something's not right 
+  - `message`: A generic notification/diagnostic message produced by the `message` function; execution of the function continues 
+  - `warning`: An indication that something is wrong but not necessary fatal; execution of the function continues; generated by the `warning` function 
+  - `error`: An indication that a fatal problem has occurred; execution stops; produced by the `stop` function 
+  - `condition`: A generic concept for indicating that something unexpected can occur; programmers can create their own conditions 
+  
+```{r warnings, warning=TRUE}
+log(-1)
+```
+## Debugging Tools in R 
+The primary tools for debugging functions in R are:
+  - `traceback`: prints out the function call stack after an error occurs; does nothing if there's no error
+  - `debug`: flags a function for "debug" mode which allows you to step through execution of a function one line at a time 
+  - `browser`: suspends the execution of a function wherever it is called and puts the function in debug mode 
+  - `trace`: allows you to insert debugging code into a function a specific places 
+  - `recover`: allows you to modify the error behavior so that you can browse the function call stack 
+  
+# Simulation and Profilling
+## Str Function 
+```{r string}
+str(lm)
+x <- rnorm(100, 2,4)
+summary(x)
+str(x)
+f <- gl(40,10)
+str(f)
+summary(f)
+library(datasets)
+data(airquality)
+str(airquality)
+m <- matrix(rnorm(100),10,10)
+str(m)
+m[,1]
+```
+
+```{r str2}
+s <- split(airquality, airquality$Month)
+str(s)
+```
+## Simulation - Generating random Numbers
+### Functions for probability distribution in R
+
+- `rnorm`: generate random Normal variates with a give nmean and standard deviation 
+- `dnorm`: evaluate the Normal probability density (with a given mean/SD) at a point (or vector of points)
+- `pnorm`: evaluate the cumulative distribution function for a Normal distribution 
+- `rpois`: generate random Poisson variates with a given rate 
+
+### 4 functions associated with probability distribution functions
+
+- `d` for density: `dnorm(x, mean = 0, sd = 1, log = FALSE)`
+- `r` for random number generation: `rnorm(n, mean = 0, sd = 1)`
+- `p` for cumulative distribution: `pnorm(q, mean = 0, sd = 1, lower.tail = TRUE, log.p = FALSE)` 
+- `q` for quantile function: `qnorm(p, mean = 0, sd = 1, lower.tail = TRUE, log.p = FALSE)`
+
+```{r eg1}
+x <- rnorm(10)
+x
+x <- rnorm(10,20,2)
+x
+summary(x)
+```
+
+### Setting the random number seed with set.seed ensures reproducibility 
+Alwarys set the random number seed when conducting a simulation
+```{r seed}
+set.seed(1)
+rnorm(5)
+
+rnorm(5)
+
+set.seed(1)
+rnorm(5)
+```
+
+### Generating Poisson data 
+```{r poisson}
+rpois(10,1)
+rpois(10,2)
+rpois(10,20)
+ppois(2,2) # cumulative distribution 
+ppois(4,2) 
+ppois(6,2)
+```
+
+## Simulating a Linear Model 
+Assume the model is $$y = \beta_0 + \beta_1 x + \varepsilon$$, where $$ \varepsilon \sim N(0, 2^2)$$, assume $$x \sim N(0,1^2)$$ and $$\beta_0 = 0.5, \beta_1 = 2$$
+
+```{r linear}
+set.seed(20)
+x <- rnorm(100)
+e <- rnorm(100,0,2)
+y <- 0.5 + 2 * x +e
+summary(y)
+plot(x,y)
+```
+  
+### when x is binary 
+```{r linear2}
+set.seed(10)
+x <- rbinom(100,1,0.5)
+e <- rnorm(100,0,2)
+y <- 0.5 + 2 * x +e
+summary(y)
+plot(x,y)
+```
+
+### Simulate from a Poisson model 
+
+$$Y \sim Poisson(\mu)$$, $$\log_\mu = \beta_0 + \beta_1 x$$ and $$\beta_0 = 0.5, \beta_1 = 0.3$$, we need to use the `rpois` function for this
+
+```{r poisson_model}
+set.seed(1)
+x <- rnorm(100)
+log.mu <- 0.5 + 0.3 * x
+y <- rpois(100, exp(log.mu))
+summary(y)
+plot(x, y)
+```
+
+## Random Sampling 
+```{r sample}
+set.seed(1)
+sample(1:10, 4)
+
+sample(1:10,4)
+sample(letters,5)
+sample(1:10) ## permutation 
+sample(1:10)
+sample(1:10, replace=TRUE) ## sample w/replacement
+
+```
+
+## Simulation Summary
+- Drawing samples from specific probability distributions can be done with `r*` functions 
+- Standard distributions are built in: _Normal, Poisson, Binomial, Exponential, Gamma_, etc 
+- The `sample` function can be used to draw random samples from arbitrary vectors 
+- Setting the random number generator seed via `set.seed` is critical  for reproducibility 
+
+## R Profiler
+### Why is My Code So Slow?
+- Profiling is a systematic way to examine how much time is spend in different parts of a program 
+- Useful when trying to optimize your code 
+- Often code runs fine once, but what if you have to put it in a loop for 1000 iterations? is it still fast enough?
+- Profiling is better than guessing 
+
+### On Optimizing Your Code 
+- Getting biggest impact on speeding up code depends on knowing where the code spends most of the time
+- This cannot be done without performance analysis or porfiling 
+
+### General Principles of Optimization 
+- Design first, then optimize 
+- Remember: Premature optimization is the root of all evil 
+- Measure (collect data), don't guess
+- If you are doing to be scientist, you need to apply the same principles here 
+- Using `system.tiem()` 
+  - Takes an arbitrary R expression as input (can be wrapped in curly braces) and returns the amount of time taken to evaluate the expression 
+  - Coumputes the time (in seconds) needed to execute an expression 
+    - If there is an error, gives time until the error occurred 
+  - Returns an object of class `proc_time`
+    - **user time**: time charged to the CPU(s) for this expression 
+    - **elapsed time**: "wall clock" time 
+  - Usually, the user time and elapsed time are relatively close, for straight computing tasks 
+  - Elapsed time may be _greater_ than _user time_ if the CPU spends a lot of time waiting around 
+  - Elapsted time may be smaller than the user time if your machine has multiple cores/processors (and is capable of using them)
+    - Multi-threaded BLAS libraries (vecLib/Accelerate, ATLAS, ACML, MKL)
+    - Parallel processing via the parallel package 
+    
+```{r elapse_time}
+## Elapsed time > user time 
+system.time(readLines("http://www.jhsph.edu"))
+
+## Elapsed time < user time 
+hilbert <- function(n){
+        i <- 1:n
+        1/outer(i-1, i, "+")
+}
+x <- hilbert(1000)
+system.time(svd(x))
+```
+```{r timing_longer_expressions}
+system.time(
+        {
+        n <- 1000
+        r <- numeric(n)
+        for (i in 1:n){
+                x <- rnorm(n)
+                r[i] <- mean(x)
+        }
+        }
+)
+```
+
+### The R Profiler 
+- The `Rprof()` function starts the profiler in R 
+  - R must be complied with profiler support (but this is usually the case)
+- The `summaryRprof()` function summarizes the output from `Rprof()` (otherwise it's not readable)
+- <span style="color:red">DO NOT</span> use `system.time()` and `Rprof()` together or you will be sad
+- `Rprof()` keeps track of the function call stack at regularly sampled intervals and tabulates how much time is spend in each function 
+- Default sampling interval is **0.02 seconds**
+- <span style="color:red">NOTE</span>: If your code runs very quickly, the profiler is not useful, but then you probably don't need it in that case 
+- Using `summaryRprof()`:
+  - the `summaryRprof()` function tabulated the R profiler output and calculated how much time is spend in which function 
+  - There are two methods for normalizing the data 
+  - `by.total` divides the time spend in each funciton by the total run time 
+  - `by.self` does the same but first substracts out time spent in functions above in the call stack 
+  
+
+
+
+  
+  
+  
+  
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# R Markdown 
+```{r Dt_table}
+# DT table = interactive
+# install.packages("DT") # install DT first
+library(DT)
+datatable(head(mtcars, n = nrow(mtcars)), options = list(pageLength = 2)) 
+```
+  
+```{r interact_map}
+library(leaflet)
+leaflet() %>%
+  setView(174.764, -36.877, zoom = 16) %>% 
+  addTiles() %>%
+  addMarkers(174.764, -36.877, popup = "Maungawhau") 
+```
+
+
+```{r interactive_time_series_isualisations}
+library(dygraphs)
+library(xts)
+lungDeaths <- cbind(mdeaths, fdeaths)
+dygraph(lungDeaths) %>% dyRangeSelector()
+```
+  
+### Beyond system.time()
+- Using `system.time()` allows you to test certain function or code blocks to see if they are taking excessive amounts of time 
+- Assumes you already know where the problem is and can call `system.time()` on it 
+- What if you don't know where to stat?
+
+
+  
+
+
+  
+  
+  
+  
+  
+  
+  
+  
