@@ -1,0 +1,87 @@
+---
+title: "Geocomputation with R"
+author: "Chen Qinqqing"
+date: "13/09/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r eg1}
+library(leaflet)
+popup = c("Robin", "Jakub", "Jannes")
+leaflet() %>%
+  addProviderTiles("NASAGIBS.ViirsEarthAtNight2012") %>%
+  addMarkers(lng = c(-3, 23, 11),
+             lat = c(52, 53, 49), 
+             popup = popup)
+```
+
+```{r load_library}
+library(sf)
+library(raster)
+library(spData)
+library(spDataLarge)
+```
+
+# Geographic data in R
+## Vector data 
+- The geographic vector model is based on points located within a coordinate reference system (**CRS**)
+
+### An introduction to simple features 
+- `sf` can represent all common vector geometry types (raster data classes are not supported by sf): points, lines, polygons and their respective ‘multi’ versions (which group together features of the same type into a single feature)
+
+- `sf` incorporates the functionality of the three main packages of the `sp paradigm`, `sp` (E. Pebesma and Bivand 2018) for the class system, `rgdal` (Bivand, Keitt, and Rowlingson 2018) for reading and writing data, `rgeos` (Bivand and Rundel 2018) for spatial operations undertaken by GEOS, in a single, cohesive whole. 
+
+```{r eg2}
+names(world)
+plot(world)
+summary(world["lifeExp"])
+world[1:2, 1:3]
+```
+
+### Why simple features
+Simple features is a widely supported data model that underlies data structures in many GIS applications including QGIS and PostGIS. A major advantage of this is that using the data model ensures your work is cross-transferable to other set-ups, for example importing from and exporting to spatial databases.
+  - Fast reading and writing of data
+  - Enhanced plotting performance
+  - sf objects can be treated as data frames in most operations
+  - sf functions can be combined using %>% operator and works well with the tidyverse collection of R packages
+  - sf function names are relatively consistent and intuitive (all begin with st_)
+
+```{r eg3}
+library(sp)
+world_sp = as(world, Class = "Spatial")
+world_sp
+```
+
+
+### Basic map making
+Basic maps are created in sf with `plot()`
+```{r eg4}
+plot(world[3:6])
+plot(world["pop"])
+```
+
+Plots are added as layers to existing images by setting `add = TRUE`
+Note that the first plot must only have one facet for `add = TRUE` to work. If the first plot has a key, `reset = FALSE` must be used (result not shown):
+```{r eg5}
+world_asia = world[world$continent == "Asia", ]
+asia = st_union(world_asia)
+plot(world["pop"], reset = FALSE)
+plot(asia, add = TRUE, col = "red")
+```
+
+### Base plot arguments
+There are various ways to modify maps with sf’s `plot()` method. Because sf extends base R plotting methods `plot()`’s arguments such as m`ain =` — which specifies the title of the map — work with sf objects (see `?graphics::plot` and `?par`)
+
+```{r eg6}
+plot(world["continent"], reset = FALSE)
+cex = sqrt
+```
+
+
+
+
+
