@@ -1,21 +1,20 @@
 ---
 title: "Supervised Learning"
-author: "Chen Qinqqing"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
-output: 
-  html_document:
-    toc: true 
-    toc_depth: 4 
-    number_sections: FALSE  
-    theme: united  
-    highlight: tango  
-    toc_float: true   
-editor_options: 
-  chunk_output_type: inline
+output:
+  md_document:
+    variant: markdown_github
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(rsample)
+library(caret)
+library(h2o)
+library(dplyr)
+h2o.no_progress()
+#launch h2o
+h2o.init()
 ```
 
 ## Supervised Learning
@@ -26,19 +25,7 @@ Regression problems revolve around predicting output that falls on a continuous 
 
 ### Classification problems
 When the objective of our supervised learning is to predict a categorical response, we refer to this as a classification problem. 
-
-## Prerequisites
-
-```{r Prerequisites, message=FALSE}
-library(rsample)
-library(caret)
-library(h2o)
-library(dplyr)
-h2o.no_progress()
-#launch h2o
-h2o.init()
-```
-
+## Load data 
 ```{r data}
 # ames data
 ames <- AmesHousing::make_ames()
@@ -50,8 +37,7 @@ churn.h2o <- as.h2o(churn)
 ```
 
 ## Data splitting
-A major goal of the machine learning process is to find an algorithm  
-f(x)that most accurately predicts future values (y) based on a set of inputs (x). In other words, we want an algorithm that not only fits well to our past data, but more importantly, one that predicts a future outcome accurately. This is called the **generalizability** of our algorithm. 
+A major goal of the machine learning process is to find an algorithm f(x)that most accurately predicts future values (y) based on a set of inputs (x). In other words, we want an algorithm that not only fits well to our past data, but more importantly, one that predicts a future outcome accurately. This is called the **generalizability** of our algorithm. 
 
 To provide an accurate understanding of the generalizability of our final optimal model, we split our data into training and test data sets:
   - Training Set: these data are used to train our algorithms and tune hyper-parameters. 60%/70%/80% (training)
@@ -86,8 +72,7 @@ test_4 <- split_2[[2]]
 ```
 
 ### Stratified sampling
-However, if we want to explicitly control our sampling so that our training and test sets have similar  
-y distributions, we can use stratified sampling. This is more common with classification problems where the reponse variable may be imbalanced (90% of observations with response “Yes” and 10% with response “No”). However, we can also apply to regression problems for data sets that have a small sample size and where the response variable deviates strongly from normality. With a continuous response variable, stratified sampling will break y down into quantiles and randomly sample from each quantile. Consequently, this will help ensure a balanced representation of the response distribution in both the training and test sets.
+However, if we want to explicitly control our sampling so that our training and test sets have similar y distributions, we can use stratified sampling. This is more common with classification problems where the reponse variable may be imbalanced (90% of observations with response “Yes” and 10% with response “No”). However, we can also apply to regression problems for data sets that have a small sample size and where the response variable deviates strongly from normality. With a continuous response variable, stratified sampling will break y down into quantiles and randomly sample from each quantile. Consequently, this will help ensure a balanced representation of the response distribution in both the training and test sets.
 
 ```{r stratified_sampling}
 # orginal response distribution

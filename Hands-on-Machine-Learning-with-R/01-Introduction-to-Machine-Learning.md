@@ -1,0 +1,138 @@
+Supervised Learning
+-------------------
+
+A **predictive model** is used for tasks that involve the prediction of
+a given output using other variables and their values (features) in the
+data set.
+
+### Regression problems
+
+Regression problems revolve around predicting output that falls on a
+continuous numeric spectrum.
+
+### Classification problems
+
+When the objective of our supervised learning is to predict a
+categorical response, we refer to this as a classification problem. \#\#
+Load data
+
+``` r
+# ames data
+ames <- AmesHousing::make_ames()
+ames.h2o <- as.h2o(ames)
+# attrition data
+churn <- rsample::attrition %>% 
+  mutate_if(is.ordered, factor, ordered = FALSE)
+churn.h2o <- as.h2o(churn)
+```
+
+Data splitting
+--------------
+
+A major goal of the machine learning process is to find an algorithm
+f(x)that most accurately predicts future values (y) based on a set of
+inputs (x). In other words, we want an algorithm that not only fits well
+to our past data, but more importantly, one that predicts a future
+outcome accurately. This is called the **generalizability** of our
+algorithm.
+
+To provide an accurate understanding of the generalizability of our
+final optimal model, we split our data into training and test data sets:
+- Training Set: these data are used to train our algorithms and tune
+hyper-parameters. 60%/70%/80% (training) - Test Set: having chosen a
+final model, these data are used to estimate its prediction error
+(generalization error). These data should not be used during model
+training! 40%/30%/20% (testing)
+
+The two most common ways of splitting data include: **simple random
+sampling** and **stratified sampling**.
+
+### Simple random sampling
+
+``` r
+# base R
+set.seed(123)
+index_1 <- sample(1:nrow(ames), round(nrow(ames) * 0.7))
+train_1 <- ames[index_1, ]
+test_1 <- ames[-index_1, ]
+
+# caret package
+set.seed(123)
+index_2 <- createDataPartition(ames$Sale_Price, p = 0.7, list = FALSE)
+train_2 <- ames[index_2, ]
+test_2 <- ames[-index_2, ]
+
+#rsample package
+set.seed(123)
+split_1 <- initial_split(ames, prop = 0.7)
+train_3 <- training(split_1)
+test_3 <- testing(split_1)
+
+# h2o package
+split_2 <- h2o.splitFrame(ames.h2o, ratios = 0.7, seed = 123)
+train_4 <- split_2[[1]]
+test_4 <- split_2[[2]]
+```
+
+### Stratified sampling
+
+However, if we want to explicitly control our sampling so that our
+training and test sets have similar y distributions, we can use
+stratified sampling. This is more common with classification problems
+where the reponse variable may be imbalanced (90% of observations with
+response “Yes” and 10% with response “No”). However, we can also apply
+to regression problems for data sets that have a small sample size and
+where the response variable deviates strongly from normality. With a
+continuous response variable, stratified sampling will break y down into
+quantiles and randomly sample from each quantile. Consequently, this
+will help ensure a balanced representation of the response distribution
+in both the training and test sets.
+
+``` r
+# orginal response distribution
+table(churn$Attrition) %>% prop.table()
+```
+
+    ## 
+    ##        No       Yes 
+    ## 0.8387755 0.1612245
+
+``` r
+# stratified sampling with the rsample package
+set.seed(123)
+split_strat  <- initial_split(churn, prop = 0.7, strata = "Attrition")
+train_strat  <- training(split_strat)
+test_strat   <- testing(split_strat)
+# consistent response ratio between train & test
+table(train_strat$Attrition) %>% prop.table()
+```
+
+    ## 
+    ##       No      Yes 
+    ## 0.838835 0.161165
+
+``` r
+table(test_strat$Attrition) %>% prop.table()
+```
+
+    ## 
+    ##        No       Yes 
+    ## 0.8386364 0.1613636
+
+Feature engineering
+-------------------
+
+**Feature engineering** generally refers to the process of adding,
+deleting, and transforming the variables to be applied to your machine
+learning algorithms. Feature engineering is a significant process and
+requires you to spend substantial time understanding your data
+
+### Response Transformation
+
+``` r
+ggplot(train_1, aes(x=Sale_Price)) + 
+  geom_density(trim = TRUE) +
+  geom_density(data = test_1, trim = TRUE, col = "red")
+```
+
+![](01-Introduction-to-Machine-Learning_files/figure-markdown_github/response-transformation-1.png)

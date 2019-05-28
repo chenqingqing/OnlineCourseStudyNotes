@@ -1,0 +1,206 @@
+---
+title: "Feature & Target Engineering"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(recipes)
+library(visdat)
+library(rsample)
+```
+
+
+## Target engineering
+
+- **Option 1**: normalize with a log transformation. This will transform most right skewed distributions to be approximately normal. 
+
+- **Option 2**: use a Box Cox transformation. A Box Cox transformation is more flexible than (but also includes as a special case) the log transformation and will find an appropriate transformation from a family of power transforms that will transform the variable as close as possible to a normal distribution 
+
+
+## Dealing with missingness
+
+### Visualizing missing values
+
+```{r}
+sum(is.na(AmesHousing::ames_raw))
+```
+
+```{r}
+AmesHousing::ames_raw %>% 
+  is.na() %>% 
+  reshape2::melt() %>% 
+  ggplot(aes(Var2, Var1, fill = value)) + 
+  geom_raster() + 
+  coord_flip() + 
+  scale_y_continuous(NULL, expand = c(0,0)) + 
+  xlab("Observation") +
+  theme(axis.text.y  = element_text(size = 4))
+```
+
+
+
+```{r}
+AmesHousing::ames_raw %>% 
+  filter(is.na(`Garage Type`)) %>% 
+  select(`Garage Type`, `Garage Cars`, `Garage Area`)
+
+vis_miss(AmesHousing::ames_raw, cluster = TRUE)
+```
+
+
+### Imputation
+
+Imputation is the process of replacing a missing value with a substituted, “best guess” value. Imputation should be one of the first feature engineering steps yo take as it will effect any downstream pre-processing
+
+- **Estimated statistic**
+- **K-nearest neighbor**: K-nearest neighbor (KNN) imputes values by identifying observations with missing values, then identifying other observations that are most similar based on the other available features, and using the values from these nearest neighbor observations to impute missing values.
+- **Tree-based**
+
+
+## Numeric feature engineering
+
+- **Skewness**: When normalizing many variables, its best to use the **Box-Cox** (when feature values are strictly positive) or **Yeo-Johnson** (when feature values are not strictly positive) procedures as these methods will identify if a transformation is required and what the optimal transformation will be.
+
+
+```{r}
+ames <- AmesHousing::make_ames()
+split_ames  <- rsample::initial_split(ames, prop = 0.7, strata = "Sale_Price")
+ames_train  <- training(split_ames)
+ames_test   <- testing(split_ames)
+
+
+
+recipe(Sale_Price ~., data = ames_train) %>% 
+  step_YeoJohnson(all_numeric())
+```
+
+
+- **Standardization**: Some packages (e.g., `glmnet`, and `caret`) have built-in options to standardize and some do not (e.g., `keras` for neural networks)
+
+
+## Categorical feature engineering
+
+- **Lumping**: Sometimes features will contain levels that have very few observations. Sometimes we can benefit from collapsing, or “lumping” these into a lesser number of categories. In the above examples, we may want to collapse all levels that are observed in less than 10% of the training sample into an “other” category. We can use `step_other()` to do so
+
+```{r}
+count(ames_train, Neighborhood) %>% arrange(n)
+
+# lump levels for two features
+lumping <- recipe(Sale_Price ~ ., data = ames_train) %>%
+  step_other(Neighborhood, threshold = .01, other = "other") %>%
+  step_other(Screen_Porch, threshold = .1, other = ">0")
+
+
+apply_2_training <- prep(lumping, training = ames_train) %>%
+  bake(ames_train)
+
+count(apply_2_training, Neighborhood) %>% arrange(n)
+count(apply_2_training, Screen_Porch) %>% arrange(n)
+```
+
+- **One-hot & dummy encoding**: Many models require that all predictor variables be numeric. Consequently, we need to intelligently transform any categorical variables into numeric representations so that these algorithms can compute. Some packages automate this process (e.g., `h2o` and `caret`) while others do not (e.g., `glmnet` and `keras`). There are many ways to re, say,code categorical variables as numeric (e.g., one-hot, ordinal, binary, sum, and Helmert).
+  - one-hot encoding, where we transpose our categorical variables so that each level of the feature is represented as a boolean value
+  - we can create full-rank one-hot encoding by dropping one of the levels (level a has been dropped). This is referred to as dummy encoding.
+
+```{r}
+recipe(Sale_Price ~., data = ames_train) %>% 
+  step_dummy(all_nominal(), one_hot = TRUE)
+```
+
+
+- **Label encoding**: Label encoding is a pure numeric conversion of the levels of a categorical variable. If a categorical variable is a factor and it has pre-specified levels then the numeric conversion will be in level order. If no levels are specified, the encoding will be based on alphabetical order. 
+
+```{r}
+#label encoded 
+recipe(Sale_Price ~., data = ames_train) %>% 
+  step_integer(MS_SubClass) %>% 
+  prep(ames_train) %>% 
+  bake(ames_train) %>% 
+  count(MS_SubClass)
+```
+
+
+- **Alternatives**: There are several alternative categorical encodings that are implemented in various R machine learning engines and are worth exploring. For example, target encoding is the process of replacing a categorical value with the mean (regression) or proportion (classification) of the target variable.
+
+## Dimension reduction
+
+```{r}
+recipe(Sale_Price ~., data = ames_train) %>% 
+  step_center(all_numeric()) %>% 
+  step_scale(all_numeric()) %>% 
+  step_pca(all_numeric(), threshold = .95)
+```
+
+## Proper implementation
+
+### Sequential steps
+
+- If using a log or `Box-Cox` transformation, don’t center the data first or do any operations that might make the data non-positive. Alternatively, use the `Yeo-Johnson` transformation so you don’t have to worry about this.
+- `One-hot` or `dummy` encoding typically results in sparse data which many algorithms can operate efficiently on. If you standardize sparse data you will create dense data and you loose the computational efficiency. Consequently, its often preferred to standardize your numeric features and then one-hot/dummy encode.
+- If you are `lumping` infrequently categories together, do so before one-hot/dummy encoding.
+- Although you can perform dimension reduction procedures on categorical features, it is common to primarily do so on numeric features when doing so for feature engineering purposes.
+
+
+
+Suggested order of potential steps: 
+
+- Filter out zero or near-zero variance features.
+- Perform imputation if required.
+- Normalize to resolve numeric feature skewness.
+- Standardize (center and scale) numeric features.
+- Perform dimension reduction (e.g., PCA) on numeric features.
+- One-hot or dummy encode categorical features.
+
+
+### Data leakage
+
+Data leakage is when information from outside the training data set is used to create the model. Data leakage often occurs during the data preprocessing period. To minimize this, feature engineering should be done in isolation of each resampling iteration.  Recall that resampling allows us to estimate the generalizable prediction error. Therefore, we should apply our feature engineering blueprint to each resample independently 
+
+![](pic/4.png)
+
+## Exercise 
+
+```{r}
+#Putting the process together
+blueprint <- recipe(Sale_Price ~ ., data = ames_train) %>%
+  step_nzv(all_nominal()) %>%
+  step_integer(matches("Qual|Cond|QC|Qu")) %>%
+  step_center(all_numeric(), -all_outcomes()) %>%
+  step_scale(all_numeric(), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE)
+```
+
+```{r}
+# create a resampling method
+cv <- trainControl(
+  method = "repeatedcv", 
+  number = 10, 
+  repeats = 5
+  )
+
+# create a hyperparameter grid search
+hyper_grid <- expand.grid(k = seq(2, 25, by = 1))
+
+# fit knn model and perform grid search
+knn_fit2 <- train(
+  blueprint, 
+  data = ames_train, 
+  method = "knn", 
+  trControl = cv, 
+  tuneGrid = hyper_grid,
+  metric = "RMSE"
+  )
+```
+
+```{r}
+knn_fit2
+plot(knn_fit2)
+```
+
